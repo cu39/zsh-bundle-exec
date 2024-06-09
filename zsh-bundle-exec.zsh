@@ -5,6 +5,10 @@ if [ ! -n "$BUNDLE_EXEC_RUBY_COMMAND" ]; then
     export BUNDLE_EXEC_RUBY_COMMAND=ruby
 fi
 
+if [[ -z "${BUNDLE_EXEC_EXCLUDE}" ]]; then
+    export BUNDLE_EXEC_EXCLUDE="bundle"
+fi
+
 function zbe-is-bundled() {
     local d="$(pwd)"
     while [[ "$(dirname $d)" != "/" ]]; do
@@ -33,6 +37,16 @@ function zbe-is-exceptional(){
         [[ "$cmd" == "$1" ]] && return 1
     done
     return 0
+}
+
+function zbe-is-excluded() {
+    [[ -z "${BUNDLE_EXEC_EXCLUDE}" ]] && return 1
+    # [[ "bundle" == $1 ]] && return 0
+    local excluded=( $(echo "${BUNDLE_EXEC_EXCLUDE}") )
+    for cmd in "${excluded[@]}"; do
+        [[ $cmd = $1 ]] && return 0
+    done
+    return 1
 }
 
 function zbe-bundler-driver(){
@@ -80,6 +94,10 @@ function zbe-auto-bundle-exec-accept-line() {
         if [[ "$expanded_args" != '' ]]; then
             args="$expanded_args $args"
         fi
+    fi
+
+    if $(zbe-is-excluded "$command"); then
+        zle accept-line && return
     fi
 
     # check command
